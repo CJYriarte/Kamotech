@@ -23,25 +23,38 @@ const URGENCIES = ['urgent', 'new', 'done'];
 export default function AdminInquiriesPage() {
   const { user } = useAuth();
   const [inquiries, setInquiries] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedId, setSelectedId] = useState(null);
   const [replyText, setReplyText] = useState('');
-  const [replyNotice, setReplyNotice] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => { fetchInquiries(); }, []);
+  useEffect(() => { if (selectedId) fetchMessages(selectedId); }, [selectedId]);
 
   const fetchInquiries = async () => {
     setLoading(true);
-        const { data, error } = await supabase
-        .from('inquiries')
-        .select('*, profiles!inquiries_customer_id_fkey(full_name, contact_number)')
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('inquiries')
+      .select('*, profiles!inquiries_customer_id_fkey(full_name, contact_number)')
+      .order('created_at', { ascending: false });
 
     if (error) setError(error.message);
     else setInquiries(data || []);
     setLoading(false);
+  };
+
+  const fetchMessages = async (inquiryId) => {
+    const { data, error } = await supabase
+      .from('inquiry_messages')
+      .select('*, profiles(full_name)')
+      .eq('inquiry_id', inquiryId)
+      .order('created_at', { ascending: true });
+
+    if (error) setError(error.message);
+    else setMessages(data || []);
   };
 
   const updateField = async (id, field, value) => {
@@ -54,9 +67,24 @@ export default function AdminInquiriesPage() {
     await updateField(id, 'assigned_to', user.id);
   };
 
-  const handleSendReply = () => {
-    if (!replyText.trim()) return;
-    setReplyNotice(true);
+  const handleSendReply = async () => {
+    if (!replyText.trim() || !selectedId) return;
+
+    setSending(true);
+    const { error } = await supabase.from('inquiry_messages').insert({
+      inquiry_id: selectedId,
+      sender_id: user.id,
+      message: replyText.trim(),
+    });
+    setSending(false);
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    setReplyText('');
+    fetchMessages(selectedId);
   };
 
   const filtered = statusFilter === 'all' ? inquiries : inquiries.filter((i) => i.status === statusFilter);
@@ -163,28 +191,51 @@ export default function AdminInquiriesPage() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-5">
-                <div className="bg-cloud-50 border border-cyan-pale rounded-xl p-4 max-w-lg">
-                  <p className="text-sm text-navy-main">{selected.message}</p>
+              <div className="flex-1 overflow-y-auto p-5 space-y-3">
+
+                <div className="flex justify-start">
+                  <div className="max-w-[75%] bg-cloud-50 border border-cyan-pale rounded-2xl rounded-bl-sm px-4 py-3">
+                    <p className="text-sm text-navy-main">{selected.message}</p>
+                    <p className="text-[10px] text-ink-muted mt-1">{selected.profiles?.full_name} • original inquiry</p>
+                  </div>
                 </div>
+
+                {messages.map((msg) => {
+                  const isStaff = msg.sender_id !== selected.customer_id;
+                  return (
+                    <div key={msg.id} className={`flex ${isStaff ? 'justify-end' : 'justify-start'}`}>
+                      <div
+                        className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm ${
+                          isStaff
+                            ? 'bg-sky-primary text-white rounded-br-sm'
+                            : 'bg-cloud-50 border border-cyan-pale text-navy-main rounded-bl-sm'
+                        }`}
+                      >
+                        <p>{msg.message}</p>
+                        <p className={`text-[10px] mt-1 ${isStaff ? 'text-white/70' : 'text-ink-muted'}`}>
+                          {msg.profiles?.full_name}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+
               </div>
 
               <div className="p-4 border-t border-cyan-pale">
-                {replyNotice && (
-                  <p className="text-xs text-violet-600 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2 mb-2">
-                    ✨ Sending isn't wired up yet — there's no messages table to store replies in. This needs both a schema addition and a teammate's Gemini integration before it's real.
-                  </p>
-                )}
                 <div className="relative">
                   <input
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendReply()}
                     placeholder="Type a reply…"
-                    className="w-full pl-4 pr-12 py-3 rounded-full bg-cloud-50 border border-cyan-pale text-navy-main placeholder-ink-muted focus:outline-none focus:ring-2 focus:ring-sky-primary text-sm"
+                    disabled={sending}
+                    className="w-full pl-4 pr-12 py-3 rounded-full bg-cloud-50 border border-cyan-pale text-navy-main placeholder-ink-muted focus:outline-none focus:ring-2 focus:ring-sky-primary text-sm disabled:opacity-60"
                   />
                   <button
                     onClick={handleSendReply}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-sky-primary hover:bg-sky-deep text-white transition-colors"
+                    disabled={sending}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-sky-primary hover:bg-sky-deep text-white transition-colors disabled:opacity-60"
                   >
                     <Send className="w-4 h-4" />
                   </button>

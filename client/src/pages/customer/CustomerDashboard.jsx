@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { Calendar, MapPin, Users, Wallet } from 'lucide-react';
-
+import bgPackages from '../../assets/branding/bg-packages.png';
 
 const BOOKING_STATUS_STYLES = {
   pending: 'bg-amber-100 text-amber-700',
@@ -60,9 +60,15 @@ export default function CustomerDashboard() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
 
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-navy-main">Welcome back, {profile?.full_name || 'Traveler'} 👋</h1>
-        <p className="text-ink-secondary text-sm mt-1">Ready for your next adventure?</p>
+      <div
+        className="relative rounded-2xl overflow-hidden mb-8 bg-cover bg-center"
+        style={{ backgroundImage: `url(${bgPackages})` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-navy-main/70 via-navy-main/40 to-transparent" />
+        <div className="relative z-10 px-8 py-12">
+          <h1 className="text-2xl font-bold text-white">Welcome back, {profile?.full_name || 'Traveler'} 👋</h1>
+          <p className="text-white/90 text-sm mt-1">Ready for your next adventure?</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">

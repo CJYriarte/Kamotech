@@ -2,11 +2,13 @@ import React from 'react';
 
 import { Link, useNavigate } from 'react-router-dom';
 
-import { Compass, Sparkles, User, LogOut } from 'lucide-react';
-
+import { Sparkles, User, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
 import logo from '../../assets/branding/logo.png';
+import NotificationBell from './NotificationBell';
+
+
+
 
 export default function Navbar() {
 
@@ -45,10 +47,9 @@ export default function Navbar() {
 
           <div className="flex items-center gap-4">
 
-            {user ? (
-
+             {user ? (
               <div className="flex items-center gap-3">
-
+                <NotificationBell />
                 <Link
 
                   to={profile?.role === 'customer' ? '/dashboard' : '/admin/dashboard'}

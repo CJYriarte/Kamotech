@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, MapPin, Users, Wallet } from 'lucide-react';
+import { Calendar, MapPin, Users, Wallet, MessageCircleQuestion } from 'lucide-react';
 import bgPackages from '../../assets/branding/bg-packages.png';
+import AskQuestionModal from '../../components/customer/AskQuestionModal';
+import InquiryThreadModal from '../../components/customer/InquiryThreadModal';
+
 
 const BOOKING_STATUS_STYLES = {
   pending: 'bg-amber-100 text-amber-700',
@@ -17,10 +20,22 @@ export default function CustomerDashboard() {
   const [bookings, setBookings] = useState([]);
   const [installmentsByBooking, setInstallmentsByBooking] = useState({});
   const [loading, setLoading] = useState(true);
+  const [showAskModal, setShowAskModal] = useState(false);
+  const [inquiries, setInquiries] = useState([]);
+  const [activeInquiry, setActiveInquiry] = useState(null);
 
   useEffect(() => {
     fetchBookings();
+    fetchInquiries();
   }, []);
+
+  const fetchInquiries = async () => {
+    const { data } = await supabase
+      .from('inquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setInquiries(data || []);
+  };
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -65,11 +80,30 @@ export default function CustomerDashboard() {
         style={{ backgroundImage: `url(${bgPackages})` }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-navy-main/70 via-navy-main/40 to-transparent" />
-        <div className="relative z-10 px-8 py-12">
-          <h1 className="text-2xl font-bold text-white">Welcome back, {profile?.full_name || 'Traveler'} 👋</h1>
-          <p className="text-white/90 text-sm mt-1">Ready for your next adventure?</p>
+        <div className="relative z-10 px-8 py-12 flex items-end justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Welcome back, {profile?.full_name || 'Traveler'} 👋</h1>
+            <p className="text-white/90 text-sm mt-1">Ready for your next adventure?</p>
+          </div>
+          <button
+            onClick={() => setShowAskModal(true)}
+            className="flex items-center gap-2 bg-white hover:bg-cloud-100 text-navy-main font-semibold text-sm px-4 py-2.5 rounded-lg shadow-soft transition-colors"
+          >
+            <MessageCircleQuestion className="w-4 h-4 text-sky-primary" />
+            Ask a Question
+          </button>
         </div>
       </div>
+
+      <AskQuestionModal
+        open={showAskModal}
+        onClose={() => {
+          setShowAskModal(false);
+          fetchInquiries();
+        }}
+      />
+
+      <InquiryThreadModal inquiry={activeInquiry} onClose={() => { setActiveInquiry(null); fetchInquiries(); }} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
         <div className="bg-white border border-cyan-pale rounded-xl p-5 shadow-soft">
@@ -87,6 +121,30 @@ export default function CustomerDashboard() {
           <p className="text-2xl font-bold text-navy-main">{pendingPaymentsCount}</p>
         </div>
       </div>
+
+      {inquiries.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-lg font-bold text-navy-main mb-4">My Inquiries</h2>
+          <div className="space-y-3">
+            {inquiries.map((inq) => (
+              <button
+                key={inq.id}
+                onClick={() => setActiveInquiry(inq)}
+                className="w-full text-left bg-white border border-cyan-pale rounded-xl p-4 shadow-soft hover:border-sky-primary transition-colors flex items-center justify-between gap-4"
+              >
+                <p className="text-sm text-ink-secondary line-clamp-1 flex-1">{inq.message}</p>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize shrink-0 ${
+                  inq.status === 'resolved' ? 'bg-emerald-100 text-emerald-700'
+                  : inq.status === 'in_progress' ? 'bg-sky-100 text-sky-700'
+                  : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {inq.status.replace('_', ' ')}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <h2 className="text-lg font-bold text-navy-main mb-4">My Bookings</h2>
 

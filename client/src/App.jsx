@@ -14,6 +14,8 @@ import AdminPackagesPage from './pages/admin/AdminPackagesPage';
 import AdminBookingsPage from './pages/admin/AdminBookingsPage';
 import AdminInquiriesPage from './pages/admin/AdminInquiriesPage';
 import AdminFollowUpsPage from './pages/admin/AdminFollowUpsPage';
+import ManageStaffPage from './pages/admin/ManageStaffPage';
+import MyToursPage from './pages/admin/MyToursPage';
 import LoginPage from './pages/auth/LoginPage';
 import StaffLoginPage from './pages/auth/StaffLoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
@@ -72,6 +74,8 @@ export default function App() {
               <Route path="/admin/bookings" element={<AdminBookingsPage />} />
               <Route path="/admin/inquiries" element={<AdminInquiriesPage />} />
               <Route path="/admin/follow-ups" element={<AdminFollowUpsPage />} />
+              <Route path="/admin/my-tours" element={<MyToursPage />} />
+              <Route path="/admin/staff" element={<ManageStaffPage />} />
             </Route>
           </Route>
         </Routes>

@@ -24,6 +24,8 @@ export default function AdminSidebar() {
     { label: 'Booking Tracking', path: '/admin/bookings', icon: '📋' },
     { label: 'Inquiries (Gemini)', path: '/admin/inquiries', icon: '💬' },
     { label: 'Follow-Ups', path: '/admin/follow-ups', icon: '📌' },
+    { label: 'My Tours', path: '/admin/my-tours', icon: '🧭' },
+    { label: 'Manage Staff', path: '/admin/staff', icon: '👥' },
   ];
 
   return (

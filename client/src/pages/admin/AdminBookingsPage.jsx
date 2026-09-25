@@ -26,14 +26,35 @@ export default function AdminBookingsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [guides, setGuides] = useState([]);
 
-  useEffect(() => { fetchBookings(); }, []);
+  useEffect(() => {
+    fetchBookings();
+    fetchGuides();
+  }, []);
+
+  const fetchGuides = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('role', 'tour_guide');
+    setGuides(data || []);
+  };
+
+  const handleAssignGuide = async (bookingId, guideId) => {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ assigned_guide_id: guideId || null })
+      .eq('id', bookingId);
+    if (error) setError(error.message);
+    else fetchBookings();
+  };
 
   const fetchBookings = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('bookings')
-      .select('*, packages(title, destination), profiles(full_name, contact_number)')
+      .select('*, packages(title, destination), customer:profiles!bookings_customer_id_fkey(full_name, contact_number), guide:profiles!bookings_assigned_guide_id_fkey(full_name)')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -127,6 +148,7 @@ export default function AdminBookingsPage() {
                 <th className="px-4 py-3 font-medium">Total</th>
                 <th className="px-4 py-3 font-medium">Payment</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Guide</th>
                 <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
@@ -135,8 +157,8 @@ export default function AdminBookingsPage() {
                 <React.Fragment key={booking.id}>
                   <tr className="hover:bg-cloud-50">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-navy-main">{booking.profiles?.full_name || '—'}</p>
-                      <p className="text-xs text-ink-muted">{booking.profiles?.contact_number || ''}</p>
+                      <p className="font-medium text-navy-main">{booking.customer?.full_name || '—'}</p>
+                      <p className="text-xs text-ink-muted">{booking.customer?.contact_number || ''}</p>
                     </td>
                     <td className="px-4 py-3 text-ink-secondary">
                       {booking.packages?.title}
@@ -159,6 +181,18 @@ export default function AdminBookingsPage() {
                         {BOOKING_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={booking.assigned_guide_id || ''}
+                        onChange={(e) => handleAssignGuide(booking.id, e.target.value)}
+                        className="text-xs px-2 py-1.5 rounded-lg border border-cyan-pale text-ink-secondary"
+                      >
+                        <option value="">Unassigned</option>
+                        {guides.map((g) => (
+                          <option key={g.id} value={g.id}>{g.full_name}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <button onClick={() => toggleExpand(booking)} className="text-sky-primary text-xs font-medium hover:underline">
                         {expandedId === booking.id ? 'Hide' : 'Installments'}
@@ -168,7 +202,7 @@ export default function AdminBookingsPage() {
 
                   {expandedId === booking.id && (
                     <tr>
-                      <td colSpan={8} className="bg-cloud-50 px-4 py-4">
+                      <td colSpan={9} className="bg-cloud-50 px-4 py-4">
                         {!installmentsByBooking[booking.id] ? (
                           <p className="text-xs text-ink-secondary">Loading installments…</p>
                         ) : installmentsByBooking[booking.id].length === 0 ? (
